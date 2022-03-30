@@ -3,7 +3,7 @@
 
 using namespace std;
 
-const int VALUE_OF_STRING = 20;
+const int VALUE_OF_STRING = 15;
 const int NUMBER_OF_VARIABLES_FOR_ARRAY = 26;
 
 struct Input_Stack
@@ -24,6 +24,12 @@ struct Value_Of_Symbols
 	double number;
 };
 
+struct Number_Of_Symbols
+{
+	int letters;
+	int operators;
+};
+
 Input_Stack* pushStack(Input_Stack* begin, char symbol);
 void deleteStack(Input_Stack*& begin);
 void popStack(Input_Stack*& begin, char& symbol);
@@ -36,58 +42,47 @@ void calculateResult(char*& output_string, Output_Stack*& begin);
 int checkStringLength(char* my_string);
 int checkPriority(char symbol);
 int correctInputInt();
-int rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& begin);
 double correctInputDouble();
 bool checkLetterAndOperatorBalance(int letters, int operators);
+bool rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& begin, int size_input_string);
 
 int main()
 {
-	int size_of_string = VALUE_OF_STRING;
+	int size_of_string = VALUE_OF_STRING, code, length;
 	Input_Stack* input_begin = NULL;
 	Output_Stack* output_begin = NULL;
-	int code;
-	char* input_string = NULL;
-	char* output_string = NULL;
-	int length;
+	char* input_string = NULL, * output_string = NULL;
+	bool is_error;
 	while (true)
 	{
 		do
 		{
-			cout << "\n Enter input string - 1\n Create Polish record - 2\n Enter variables and calculate - 3\n EXIT - 0\n";
+			cout << "\n Enter input string and create Polish record - 1\n Enter variables and calculate - 2\n EXIT - 0\n";
 			code = correctInputInt();
-		} while (code < 0 || code > 3);
+		} while (code < 0 || code > 2);
 		switch (code)
 		{
 		case 1:cout << "Enter string:" << endl;
 			input_string = new char[size_of_string];
 			checkInputString(input_string, size_of_string);
+			length = checkStringLength(input_string);
+			output_string = new char[length + 1];
+			is_error = rewriteToPolish(input_string, output_string, input_begin, size_of_string);
+			if (!is_error)
+			{
+				cout << "\nPolish record:"<<endl;
+				for (int i = 0; output_string[i] != '\0'; i++)
+				{
+					cout << output_string[i];
+				}
+				cout << endl;
+			}
 			break;
 		case 2:
-			if (input_string)
-			{
-				int variant;
-				length = checkStringLength(input_string);
-				output_string = new char[length + 1];
-				variant = rewriteToPolish(input_string, output_string, input_begin);
-				if (variant == 0)
-				{
-					cout << "Polish record: ";
-					for (int i = 0; output_string[i] != '\0'; i++)
-					{
-						cout << output_string[i];
-					}
-					cout << endl;
-				}
-			}
-			else
-			{
-				cout << "Enter a string first!" << endl;
-			}
-			break;
-		case 3:
 			if (output_string)
 			{
-				calculateResult(output_string, output_begin);
+				if (!is_error)calculateResult(output_string, output_begin);
+				else cout << "Enter a right string first!" << endl;
 			}
 			else
 			{
@@ -106,12 +101,18 @@ int main()
 	}
 }
 
-int rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& begin)
+bool rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& begin, int size_input_string)
 {
 	char symbol, next_symbol, variable;
-	int j = 0, letters = 0, operators = 0, letters_in_brackets = 0, operators_in_brackets = 0;
-	bool flag = false, is_open_bracket = false;
-	for (int i = 0; input_string[i] != '\0'; i++)
+	int j = 0, count_of_open_brackets = 1, count_of_close_brackets = 1;
+	bool flag = false, is_error = false, is_open_bracket = false;
+	Number_Of_Symbols* arr = new Number_Of_Symbols[size_input_string];//для подсчета баланса операндов и операторов
+	for (int i = 0; i < size_input_string; i++)			//нулевая ячейка для подсчета всех, другие - только для внутренних скобок 
+	{
+		arr[i].letters = 0;
+		arr[i].operators = 0;
+	}
+	for (int i = 0; input_string[i] != '\0' && !is_error; i++)
 	{
 		symbol = input_string[i];
 		next_symbol = input_string[i + 1];
@@ -120,23 +121,29 @@ int rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& beg
 			if (next_symbol >= 'a' && next_symbol <= 'z')
 			{
 				cout << "There is 2 operands in a row!" << endl;
-				return -1;
+				is_error = true;
 			}
 			output_string[j] = symbol;
 			j++;
-			letters++;
+			arr[0].letters += 1;
 			if (is_open_bracket)
 			{
-				letters_in_brackets++;
+				for (int k = 1; k < count_of_open_brackets && k < size_input_string; k++)//нулевая ячейка используется 
+																			//для подсчета всех операторов и операндов
+				{
+					arr[k].letters += 1;
+				}
 			}
 		}
 		else if (symbol == '(')
 		{
 			begin = pushStack(begin, symbol);
 			is_open_bracket = true;
+			count_of_open_brackets++;
 		}
 		else if (symbol == ')')
 		{
+			count_of_close_brackets++;
 			while (begin)
 			{
 				if ((begin->symbol) == '(')
@@ -147,28 +154,41 @@ int rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& beg
 				popStack(begin, variable);
 				output_string[j] = variable;
 				j++;
-				operators++;
-				operators_in_brackets++;
+				arr[0].operators += 1;
+				for (int z = 1; z < count_of_open_brackets && z < size_input_string; z++)
+				{
+					arr[z].operators += 1;
+				}
 			}
-			if (!flag)
+			if (!flag)//если не нашлась открывающая скобка
 			{
 				cout << "Bad brackets balance!" << endl;
-				return -1;
+				is_error = true;
 			}
-			if (checkLetterAndOperatorBalance(letters_in_brackets, operators_in_brackets))
-			{
+			else if (checkLetterAndOperatorBalance(arr[count_of_open_brackets - 1].letters, arr[count_of_open_brackets - 1].operators))
+			{//если баланс внутри скобок нарушен
 				cout << "Bad letter and operator balance in brackets!" << endl;
-				return -1;
+				is_error = true;
 			}
-			letters_in_brackets = 0;
-			operators_in_brackets = 0;
-			popStack(begin, variable);
+			else
+			{
+				count_of_close_brackets--;
+				arr[count_of_open_brackets - 1].letters = 0;
+				arr[count_of_open_brackets - 1].operators = 0;
+				count_of_open_brackets--;
+				if (count_of_open_brackets == 1 && count_of_close_brackets == 1)
+				{
+					is_open_bracket = false;
+				}
+				popStack(begin, variable);
+			}
 		}
 		else if (symbol == '/' || symbol == '*' || symbol == '+' || symbol == '-' || symbol == '^')
 		{
 			if (next_symbol == '/' || next_symbol == '*' || next_symbol == '+' || next_symbol == '-' || next_symbol == '^')
 			{
 				cout << "There is 2 operators in a row!" << endl;
+				is_error = true;
 				break;
 			}
 			while (begin && checkPriority(begin->symbol) >= checkPriority(symbol))
@@ -176,7 +196,14 @@ int rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& beg
 				popStack(begin, variable);
 				output_string[j] = variable;
 				j++;
-				operators++;
+				arr[0].operators += 1;
+				if (is_open_bracket)
+				{
+					for (int z = 1; z < count_of_open_brackets && z < size_input_string; z++)
+					{
+						arr[z].operators += 1;
+					}
+				}
 			}
 			begin = pushStack(begin, symbol);
 		}
@@ -184,22 +211,26 @@ int rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& beg
 	while (begin)
 	{
 		popStack(begin, variable);
-		if (variable == '(')
-		{
-			cout << "Bad brackets balance!" << endl;
-			return -1;
-		}
-		operators++;
+		arr[0].operators += 1;
 		output_string[j] = variable;
 		j++;
 	}
-	if (checkLetterAndOperatorBalance(letters, operators))
+	if (count_of_close_brackets != count_of_open_brackets)
+	{
+		cout << "Bad brackets balance!" << endl;
+		is_error = true;
+	}
+	else if (checkLetterAndOperatorBalance(arr[0].letters, arr[0].operators))//если не равно общее число операндов и операторов
 	{
 		cout << "Bad letter and operator balance!" << endl;
-		return -1;
+		is_error = true;
 	}
-	output_string[j] = '\0';
-	return 0;
+	else
+	{
+		output_string[j] = '\0';
+	}
+	delete[]arr;
+	return is_error;
 }
 
 void calculateResult(char*& output_string, Output_Stack*& begin)
@@ -273,7 +304,6 @@ void calculateResult(char*& output_string, Output_Stack*& begin)
 					result = pow(var2, var1);
 				}
 				break;
-			default: cout << "ERROR" << endl;
 			}
 			begin = pushStack(begin, result);
 		}
