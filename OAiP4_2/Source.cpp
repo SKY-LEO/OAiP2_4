@@ -1,12 +1,10 @@
 #include <iostream>
-#include <ctime>
 #include <conio.h>
-#include <iomanip>
 
 using namespace std;
 
 const int VALUE_OF_STRING = 20;
-const int NUMBER_OF_VARIABLES_FOR_ARRAY = 5;
+const int NUMBER_OF_VARIABLES_FOR_ARRAY = 26;
 
 struct Input_Stack
 {
@@ -20,28 +18,27 @@ struct Output_Stack
 	Output_Stack* next;
 };
 
+struct Value_Of_Symbols
+{
+	char symbol;
+	double number;
+};
+
 Input_Stack* pushStack(Input_Stack* begin, char symbol);
-Input_Stack* viewStack(Input_Stack* begin);
 void deleteStack(Input_Stack*& begin);
 void popStack(Input_Stack*& begin, char& symbol);
 Output_Stack* pushStack(Output_Stack* begin, double number);
-Output_Stack* viewStack(Output_Stack* begin);
 void deleteStack(Output_Stack*& begin);
 void popStack(Output_Stack*& begin, double& number);
-double correctInputDouble();
-int correctInputInt();
 void getMemoryForArray(char*& my_string, int& size);
-
-
-void checkInputString(char*&, int&);
-
-int checkStringLength(char*);
-
-
-int checkPriority(char symbol);
-void rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& begin);
+void checkInputString(char*& my_string, int& size);
 void calculateResult(char*& output_string, Output_Stack*& begin);
-void pushBackArray(char*& my_string, int& size, char symbol);
+int checkStringLength(char* my_string);
+int checkPriority(char symbol);
+int correctInputInt();
+int rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& begin);
+double correctInputDouble();
+bool checkLetterAndOperatorBalance(int letters, int operators);
 
 int main()
 {
@@ -68,14 +65,19 @@ int main()
 		case 2:
 			if (input_string)
 			{
+				int variant;
 				length = checkStringLength(input_string);
-				output_string = new char[length];
-				rewriteToPolish(input_string, output_string, input_begin);
-				for (int i = 0; output_string[i] != '\0'; i++)
+				output_string = new char[length + 1];
+				variant = rewriteToPolish(input_string, output_string, input_begin);
+				if (variant == 0)
 				{
-					cout << output_string[i];
+					cout << "Polish record: ";
+					for (int i = 0; output_string[i] != '\0'; i++)
+					{
+						cout << output_string[i];
+					}
+					cout << endl;
 				}
-				//delete[]input_string;
 			}
 			else
 			{
@@ -86,7 +88,6 @@ int main()
 			if (output_string)
 			{
 				calculateResult(output_string, output_begin);
-				//delete[]output_string;
 			}
 			else
 			{
@@ -105,36 +106,132 @@ int main()
 	}
 }
 
+int rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& begin)
+{
+	char symbol, next_symbol, variable;
+	int j = 0, letters = 0, operators = 0, letters_in_brackets = 0, operators_in_brackets = 0;
+	bool flag = false, is_open_bracket = false;
+	for (int i = 0; input_string[i] != '\0'; i++)
+	{
+		symbol = input_string[i];
+		next_symbol = input_string[i + 1];
+		if (symbol >= 'a' && symbol <= 'z')
+		{
+			if (next_symbol >= 'a' && next_symbol <= 'z')
+			{
+				cout << "There is 2 operands in a row!" << endl;
+				return -1;
+			}
+			output_string[j] = symbol;
+			j++;
+			letters++;
+			if (is_open_bracket)
+			{
+				letters_in_brackets++;
+			}
+		}
+		else if (symbol == '(')
+		{
+			begin = pushStack(begin, symbol);
+			is_open_bracket = true;
+		}
+		else if (symbol == ')')
+		{
+			while (begin)
+			{
+				if ((begin->symbol) == '(')
+				{
+					flag = true;
+					break;
+				}
+				popStack(begin, variable);
+				output_string[j] = variable;
+				j++;
+				operators++;
+				operators_in_brackets++;
+			}
+			if (!flag)
+			{
+				cout << "Bad brackets balance!" << endl;
+				return -1;
+			}
+			if (checkLetterAndOperatorBalance(letters_in_brackets, operators_in_brackets))
+			{
+				cout << "Bad letter and operator balance in brackets!" << endl;
+				return -1;
+			}
+			letters_in_brackets = 0;
+			operators_in_brackets = 0;
+			popStack(begin, variable);
+		}
+		else if (symbol == '/' || symbol == '*' || symbol == '+' || symbol == '-' || symbol == '^')
+		{
+			if (next_symbol == '/' || next_symbol == '*' || next_symbol == '+' || next_symbol == '-' || next_symbol == '^')
+			{
+				cout << "There is 2 operators in a row!" << endl;
+				break;
+			}
+			while (begin && checkPriority(begin->symbol) >= checkPriority(symbol))
+			{
+				popStack(begin, variable);
+				output_string[j] = variable;
+				j++;
+				operators++;
+			}
+			begin = pushStack(begin, symbol);
+		}
+	}
+	while (begin)
+	{
+		popStack(begin, variable);
+		if (variable == '(')
+		{
+			cout << "Bad brackets balance!" << endl;
+			return -1;
+		}
+		operators++;
+		output_string[j] = variable;
+		j++;
+	}
+	if (checkLetterAndOperatorBalance(letters, operators))
+	{
+		cout << "Bad letter and operator balance!" << endl;
+		return -1;
+	}
+	output_string[j] = '\0';
+	return 0;
+}
+
 void calculateResult(char*& output_string, Output_Stack*& begin)
 {
 	char symbol;
-	double number;
 	double var1, var2;
 	double result = 0.;
-	bool zero_denominator = false;
-	int size_of_array = NUMBER_OF_VARIABLES_FOR_ARRAY;
-	char* variables = new char[size_of_array];
-	for (int i = 0; i < size_of_array; i++) variables[i] = '\0';
-	for (int i = 0; output_string[i] != '\0' && !zero_denominator; i++)
+	bool is_error = false;
+	int k = 0;
+	Value_Of_Symbols array_of_struct[NUMBER_OF_VARIABLES_FOR_ARRAY];
+	for (int i = 0; output_string[i] != '\0' && !is_error; i++)
 	{
 		symbol = output_string[i];
 		if (symbol >= 'a' && symbol <= 'z')
 		{
 			bool flag = false;
-			for (int j = 0; variables[j] != '\0'; j++)
+			for (int j = 0; j < k && k < NUMBER_OF_VARIABLES_FOR_ARRAY; j++)
 			{
-				if (variables[j] == symbol)
+				if (array_of_struct[j].symbol == symbol)
 				{
 					flag = true;
+					begin = pushStack(begin, array_of_struct[j].number);
 					break;
 				}
 			}
 			if (!flag)
 			{
 				cout << "Enter " << symbol << ": ";
-				number = correctInputDouble();
-				begin = pushStack(begin, number);
-				pushBackArray(variables, size_of_array, symbol);
+				array_of_struct[k].symbol = symbol;
+				array_of_struct[k].number = correctInputDouble();
+				begin = pushStack(begin, array_of_struct[k].number);
+				k++;
 			}
 		}
 		else
@@ -154,24 +251,37 @@ void calculateResult(char*& output_string, Output_Stack*& begin)
 				{
 					result = var2 / var1;
 				}
-				else {
+				else
+				{
 					cout << "Denominator is 0! Error!" << endl;
-					zero_denominator = true;
+					is_error = true;
 				}
 				break;
-			case '^':result = pow(var2, var1);
+			case '^':
+				if (var1 == 0. && var2 == 0.)
+				{
+					cout << "Error! 0^0 is uncertainty!" << endl;
+					is_error = true;
+				}
+				else if (var2 < 0. && (int)var1 != var1)//отрицательное число может быть возведено только в цклую степень
+				{
+					cout << "For negative number only integer power!" << endl;
+					is_error = true;
+				}
+				else
+				{
+					result = pow(var2, var1);
+				}
 				break;
-			default: cout << "ERROR";
+			default: cout << "ERROR" << endl;
 			}
 			begin = pushStack(begin, result);
 		}
 	}
-	if (!zero_denominator)
+	if (!is_error)
 	{
 		cout << "Result: " << result << endl;
 	}
-	deleteStack(begin);
-	delete[]variables;
 }
 
 int checkPriority(char symbol)
@@ -188,103 +298,9 @@ int checkPriority(char symbol)
 	}
 }
 
-void rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& begin)
+bool checkLetterAndOperatorBalance(int letters, int operators)
 {
-	char symbol, next_symbol, variable;
-	int j = 0;
-	bool flag = false;
-	bool flagn = false;
-	for (int i = 0; input_string[i] != '\0'; i++)
-	{
-		symbol = input_string[i];
-		next_symbol = input_string[i + 1];
-		if (symbol >= 'a' && symbol <= 'z')
-		{
-			if (next_symbol >= 'a' && next_symbol <= 'z')
-			{
-				cout << "There is 2 operands in a row!" << endl;
-				//break;
-				return;
-			}
-			output_string[j] = symbol;
-			j++;
-		}
-		else if (symbol == '(')
-		{
-			begin = pushStack(begin, symbol);
-		}
-		else if (symbol == ')')
-		{
-			/*while ((begin->symbol) != '(')
-			{
-				popStack(begin, variable);
-				if (!begin)
-				{
-					variable = '\0';
-				}
-				output_string[j] = variable;
-				j++;
-			}*/
-			
-			while (begin)
-			{
-				if (begin->symbol == '(')
-				{
-					flag = true;
-					break;
-				}
-				popStack(begin, variable);
-				//if (!begin)
-				//{
-					//variable = '\0';
-				//}
-				output_string[j] = variable;
-				j++;
-			}
-			if (!flag)
-			{
-				cout << "No balance!" << endl;
-				return;
-			}
-			popStack(begin, variable);
-		}
-		else if (symbol == '/' || symbol == '*' || symbol == '+' || symbol == '-' || symbol == '^')
-		{
-			if (next_symbol == '/' || next_symbol == '*' || next_symbol == '+' || next_symbol == '-' || next_symbol == '^')
-			{
-				cout << "There is 2 operators in a row!" << endl;
-				break;
-			}
-			while (begin)
-			{
-				if (checkPriority(begin->symbol) >= checkPriority(symbol))
-				{
-					popStack(begin, variable);
-					output_string[j] = variable;
-					j++;
-					flagn = true;
-				}
-			}
-			if (!flagn)
-			{
-				cout << "No balance!1" << endl;
-				return;
-			}
-			begin = pushStack(begin, symbol);
-		}
-	}
-	while (begin)
-	{
-		popStack(begin, variable);
-		if (variable == '(')
-		{
-			cout << "error" << endl;
-			return;
-		}
-		output_string[j] = variable;
-		j++;
-	}
-	output_string[j] = '\0';
+	return letters != operators + 1;
 }
 
 Input_Stack* pushStack(Input_Stack* begin, char symbol)
@@ -303,19 +319,7 @@ void popStack(Input_Stack*& begin, char& symbol)
 	delete temp;
 }
 
-Input_Stack* viewStack(Input_Stack* begin)
-{
-	if (begin)
-	{
-		cout << begin->symbol << '\t';
-		begin = begin->next;
-		return viewStack(begin);
-	}
-	cout << endl;
-	return begin;
-}
-
-void deleteStack(Input_Stack*& begin)//по адресу
+void deleteStack(Input_Stack*& begin)
 {
 	while (begin)
 	{
@@ -340,18 +344,6 @@ void popStack(Output_Stack*& begin, double& number)
 	number = begin->number;
 	begin = begin->next;
 	delete temp;
-}
-
-Output_Stack* viewStack(Output_Stack* begin)
-{
-	if (begin)
-	{
-		cout << begin->number << '\t';
-		begin = begin->next;
-		return viewStack(begin);
-	}
-	cout << endl;
-	return begin;
 }
 
 void deleteStack(Output_Stack*& begin)
@@ -412,7 +404,7 @@ void checkInputString(char*& my_string, int& size)
 		{
 			getMemoryForArray(my_string, size);
 		}
-		my_string[i] = _getch();
+		my_string[i] = (char)_getch();
 		if (my_string[i] == 13) break;//enter
 		if (my_string[i] == 8) {//backspace
 			cout << "\b \b";
@@ -447,25 +439,9 @@ void getMemoryForArray(char*& my_string, int& size)
 	size *= 2;
 }
 
-void pushBackArray(char*& my_string, int& size, char symbol)
-{
-	int length = checkStringLength(my_string);
-	if (length + 1 == size)
-	{
-		getMemoryForArray(my_string, size);
-	}
-	my_string[length] = symbol;
-}
-
 int checkStringLength(char* my_string)
 {
 	int length = 0;
 	for (length; my_string[length] != '\0'; length++);
 	return length;
 }
-
-
-
-
-
-
