@@ -3,7 +3,7 @@
 
 using namespace std;
 
-const int VALUE_OF_STRING = 15;
+const int START_VALUE_OF_STRING = 20;
 const int NUMBER_OF_VARIABLES_FOR_ARRAY = 26;
 
 struct Input_Stack
@@ -18,16 +18,17 @@ struct Output_Stack
 	Output_Stack* next;
 };
 
+struct Num_Of_Sym_Stack
+{
+	int letters = 0;
+	int operators = 0;
+	Num_Of_Sym_Stack* next;
+};
+
 struct Value_Of_Symbols
 {
 	char symbol;
 	double number;
-};
-
-struct Number_Of_Symbols
-{
-	int letters;
-	int operators;
 };
 
 Input_Stack* pushStack(Input_Stack* begin, char symbol);
@@ -36,6 +37,10 @@ void popStack(Input_Stack*& begin, char& symbol);
 Output_Stack* pushStack(Output_Stack* begin, double number);
 void deleteStack(Output_Stack*& begin);
 void popStack(Output_Stack*& begin, double& number);
+Num_Of_Sym_Stack* refreshNumOfSymAndLet(Num_Of_Sym_Stack* begin, bool is_letters);
+Num_Of_Sym_Stack* pushStack(Num_Of_Sym_Stack* begin);
+void deleteStack(Num_Of_Sym_Stack*& begin);
+void popStack(Num_Of_Sym_Stack*& begin, int& letters, int& operators);
 void getMemoryForArray(char*& my_string, int& size);
 void checkInputString(char*& my_string, int& size);
 void calculateResult(char*& output_string, Output_Stack*& begin);
@@ -44,15 +49,15 @@ int checkPriority(char symbol);
 int correctInputInt();
 double correctInputDouble();
 bool checkLetterAndOperatorBalance(int letters, int operators);
-bool rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& begin, int size_input_string);
+bool rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& begin);
 
 int main()
 {
-	int size_of_string = VALUE_OF_STRING, code, length;
+	int size_of_string = START_VALUE_OF_STRING, code, length;
 	Input_Stack* input_begin = NULL;
 	Output_Stack* output_begin = NULL;
 	char* input_string = NULL, * output_string = NULL;
-	bool is_error;
+	bool is_input_deleted = false, is_output_deleted = false, is_error = false;
 	while (true)
 	{
 		do
@@ -67,10 +72,12 @@ int main()
 			checkInputString(input_string, size_of_string);
 			length = checkStringLength(input_string);
 			output_string = new char[length + 1];
-			is_error = rewriteToPolish(input_string, output_string, input_begin, size_of_string);
+			is_error = rewriteToPolish(input_string, output_string, input_begin);
+			delete[]input_string;
+			is_input_deleted = true;
 			if (!is_error)
 			{
-				cout << "\nPolish record:"<<endl;
+				cout << "\nPolish record:" << endl;
 				for (int i = 0; output_string[i] != '\0'; i++)
 				{
 					cout << output_string[i];
@@ -79,40 +86,37 @@ int main()
 			}
 			break;
 		case 2:
-			if (output_string)
+			if (output_string == NULL || !is_error)
 			{
-				if (!is_error)calculateResult(output_string, output_begin);
-				else cout << "Enter a right string first!" << endl;
+				calculateResult(output_string, output_begin);
+				is_output_deleted = true;
+				delete[]output_string;
 			}
 			else
 			{
-				cout << "Create a Polish record first!" << endl;
+				cout << "Enter a string first!" << endl;
 			}
 			break;
 		case 0:
 			cout << "Safe exit..." << endl;
 			if (input_begin) deleteStack(input_begin);
 			if (output_begin) deleteStack(output_begin);
-			delete[]input_string;
-			delete[]output_string;
+			if(!is_input_deleted)delete[]input_string;
+			if(!is_output_deleted)delete[]output_string;
 			system("pause");
 			return 0;
 		}
 	}
 }
 
-bool rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& begin, int size_input_string)
+bool rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& begin)
 {
 	char symbol, next_symbol, variable;
-	int j = 0, count_of_open_brackets = 1, count_of_close_brackets = 1;
-	bool flag = false, is_error = false, is_open_bracket = false;
-	Number_Of_Symbols* arr = new Number_Of_Symbols[size_input_string];//для подсчета баланса операндов и операторов
-	for (int i = 0; i < size_input_string; i++)			//нулевая ячейка для подсчета всех, другие - только для внутренних скобок 
-	{
-		arr[i].letters = 0;
-		arr[i].operators = 0;
-	}
-	for (int i = 0; input_string[i] != '\0' && !is_error; i++)
+	int j = 0, letters, operators;
+	bool is_error = false, flag;
+	Num_Of_Sym_Stack* begin_num_of_sym_stack = NULL;
+	begin_num_of_sym_stack = pushStack(begin_num_of_sym_stack);
+	for (int i = 0; input_string[i] != '\0'; i++)
 	{
 		symbol = input_string[i];
 		next_symbol = input_string[i + 1];
@@ -120,30 +124,21 @@ bool rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& be
 		{
 			if (next_symbol >= 'a' && next_symbol <= 'z')
 			{
-				cout << "There is 2 operands in a row!" << endl;
+				cout << "\nThere is 2 operands in a row!" << endl;
 				is_error = true;
 			}
 			output_string[j] = symbol;
 			j++;
-			arr[0].letters += 1;
-			if (is_open_bracket)
-			{
-				for (int k = 1; k < count_of_open_brackets && k < size_input_string; k++)//нулевая ячейка используется 
-																			//для подсчета всех операторов и операндов
-				{
-					arr[k].letters += 1;
-				}
-			}
+			refreshNumOfSymAndLet(begin_num_of_sym_stack, true);
 		}
 		else if (symbol == '(')
 		{
 			begin = pushStack(begin, symbol);
-			is_open_bracket = true;
-			count_of_open_brackets++;
+			begin_num_of_sym_stack = pushStack(begin_num_of_sym_stack);
 		}
 		else if (symbol == ')')
 		{
-			count_of_close_brackets++;
+			flag = false;
 			while (begin)
 			{
 				if ((begin->symbol) == '(')
@@ -154,32 +149,23 @@ bool rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& be
 				popStack(begin, variable);
 				output_string[j] = variable;
 				j++;
-				arr[0].operators += 1;
-				for (int z = 1; z < count_of_open_brackets && z < size_input_string; z++)
-				{
-					arr[z].operators += 1;
-				}
+				refreshNumOfSymAndLet(begin_num_of_sym_stack, false);
 			}
 			if (!flag)//если не нашлась открывающая скобка
 			{
-				cout << "Bad brackets balance!" << endl;
+				cout << "\nThere are more close brackets than open!" << endl;
 				is_error = true;
+				break;
 			}
-			else if (checkLetterAndOperatorBalance(arr[count_of_open_brackets - 1].letters, arr[count_of_open_brackets - 1].operators))
-			{//если баланс внутри скобок нарушен
-				cout << "Bad letter and operator balance in brackets!" << endl;
+			popStack(begin_num_of_sym_stack, letters, operators);
+			if (checkLetterAndOperatorBalance(letters, operators))//если баланс внутри скобок нарушен
+			{
+				cout << "\nBad letter and operator balance in brackets!" << endl;
 				is_error = true;
+				break;
 			}
 			else
 			{
-				count_of_close_brackets--;
-				arr[count_of_open_brackets - 1].letters = 0;
-				arr[count_of_open_brackets - 1].operators = 0;
-				count_of_open_brackets--;
-				if (count_of_open_brackets == 1 && count_of_close_brackets == 1)
-				{
-					is_open_bracket = false;
-				}
 				popStack(begin, variable);
 			}
 		}
@@ -187,7 +173,7 @@ bool rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& be
 		{
 			if (next_symbol == '/' || next_symbol == '*' || next_symbol == '+' || next_symbol == '-' || next_symbol == '^')
 			{
-				cout << "There is 2 operators in a row!" << endl;
+				cout << "\nThere is 2 operators in a row!" << endl;
 				is_error = true;
 				break;
 			}
@@ -196,40 +182,41 @@ bool rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& be
 				popStack(begin, variable);
 				output_string[j] = variable;
 				j++;
-				arr[0].operators += 1;
-				if (is_open_bracket)
-				{
-					for (int z = 1; z < count_of_open_brackets && z < size_input_string; z++)
-					{
-						arr[z].operators += 1;
-					}
-				}
+				refreshNumOfSymAndLet(begin_num_of_sym_stack, false);
 			}
 			begin = pushStack(begin, symbol);
 		}
 	}
-	while (begin)
+	if (!is_error)
 	{
-		popStack(begin, variable);
-		arr[0].operators += 1;
-		output_string[j] = variable;
-		j++;
+		while (begin)
+		{
+			popStack(begin, variable);
+			if (variable == '(')
+			{
+				is_error = true;
+				cout << "\nThere are more open brackets than close!" << endl;
+				break;
+			}
+			output_string[j] = variable;
+			refreshNumOfSymAndLet(begin_num_of_sym_stack, false);
+			j++;
+		}
+		if (!is_error)
+		{
+			popStack(begin_num_of_sym_stack, letters, operators);
+			if (checkLetterAndOperatorBalance(letters, operators))//если не равно общее число операндов и операторов
+			{
+				cout << "\nBad letter and operator balance!" << endl;
+				is_error = true;
+			}
+			else
+			{
+				output_string[j] = '\0';
+			}
+		}
 	}
-	if (count_of_close_brackets != count_of_open_brackets)
-	{
-		cout << "Bad brackets balance!" << endl;
-		is_error = true;
-	}
-	else if (checkLetterAndOperatorBalance(arr[0].letters, arr[0].operators))//если не равно общее число операндов и операторов
-	{
-		cout << "Bad letter and operator balance!" << endl;
-		is_error = true;
-	}
-	else
-	{
-		output_string[j] = '\0';
-	}
-	delete[]arr;
+	if (begin_num_of_sym_stack)deleteStack(begin_num_of_sym_stack);
 	return is_error;
 }
 
@@ -238,7 +225,7 @@ void calculateResult(char*& output_string, Output_Stack*& begin)
 	char symbol;
 	double var1, var2;
 	double result = 0.;
-	bool is_error = false;
+	bool is_error = false, flag;
 	int k = 0;
 	Value_Of_Symbols array_of_struct[NUMBER_OF_VARIABLES_FOR_ARRAY];
 	for (int i = 0; output_string[i] != '\0' && !is_error; i++)
@@ -246,7 +233,7 @@ void calculateResult(char*& output_string, Output_Stack*& begin)
 		symbol = output_string[i];
 		if (symbol >= 'a' && symbol <= 'z')
 		{
-			bool flag = false;
+			flag = false;
 			for (int j = 0; j < k && k < NUMBER_OF_VARIABLES_FOR_ARRAY; j++)
 			{
 				if (array_of_struct[j].symbol == symbol)
@@ -318,12 +305,12 @@ int checkPriority(char symbol)
 {
 	switch (symbol)
 	{
-	case '^': return 4;
-	case '/':
-	case '*': return 3;
 	case '+':
 	case '-': return 2;
+	case '/':
+	case '*': return 3;
 	case '(': return 1;
+	case '^': return 4;
 	default:return 0;
 	}
 }
@@ -387,6 +374,51 @@ void deleteStack(Output_Stack*& begin)
 	cout << "Output stack deleted successfully" << endl;
 }
 
+Num_Of_Sym_Stack* pushStack(Num_Of_Sym_Stack* begin)
+{
+	Num_Of_Sym_Stack* temp = new Num_Of_Sym_Stack;
+	temp->next = begin;
+	return temp;
+}
+
+void popStack(Num_Of_Sym_Stack*& begin, int& letters, int& operators)
+{
+	Num_Of_Sym_Stack* temp = begin;
+	letters = begin->letters;
+	operators = begin->operators;
+	begin = begin->next;
+	delete temp;
+}
+
+void deleteStack(Num_Of_Sym_Stack*& begin)
+{
+	while (begin)
+	{
+		Num_Of_Sym_Stack* temp = begin;
+		begin = begin->next;
+		delete temp;
+	}
+	cout << "Temp stack deleted successfully" << endl;
+}
+
+Num_Of_Sym_Stack* refreshNumOfSymAndLet(Num_Of_Sym_Stack* begin, bool is_letters)
+{
+	if (begin)
+	{
+		if (is_letters)
+		{
+			begin->letters += 1;
+		}
+		else
+		{
+			begin->operators += 1;
+		}
+		begin = begin->next;
+		return refreshNumOfSymAndLet(begin, is_letters);
+	}
+	return begin;
+}
+
 double correctInputDouble()
 {
 	double a;
@@ -399,7 +431,7 @@ double correctInputDouble()
 		else
 		{
 			cin.clear();
-			cin.ignore(numeric_limits<streamsize>::max(), '\n');
+			cin.ignore(256, '\n');
 			cout << "Error, please write Double numbers!\n" << "Try again!" << endl;
 		}
 	}
@@ -418,8 +450,8 @@ int correctInputInt()
 		else
 		{
 			cin.clear();
-			cin.ignore(numeric_limits<streamsize>::max(), '\n');
-			cout << "Error, please write INT numbers!\n" << "Try again!" << endl;
+			cin.ignore(256, '\n');
+			cout << "Error, please write Integer numbers!\n" << "Try again!" << endl;
 		}
 	}
 	return a;
