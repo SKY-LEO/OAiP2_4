@@ -101,8 +101,8 @@ int main()
 			cout << "Safe exit..." << endl;
 			if (input_begin) deleteStack(input_begin);
 			if (output_begin) deleteStack(output_begin);
-			if(!is_input_deleted)delete[]input_string;
-			if(!is_output_deleted)delete[]output_string;
+			if (!is_input_deleted)delete[]input_string;
+			if (!is_output_deleted)delete[]output_string;
 			system("pause");
 			return 0;
 		}
@@ -503,7 +503,7 @@ void getMemoryForArray(char*& my_string, int& size)
 
 int checkStringLength(char* my_string)
 {
-	int length = 0;
-	for (length; my_string[length] != '\0'; length++);
+	int length;
+	for (length = 0; my_string[length] != '\0'; length++);
 	return length;
 }
