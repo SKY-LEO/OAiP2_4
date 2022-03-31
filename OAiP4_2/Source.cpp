@@ -105,9 +105,9 @@ bool rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& be
 {
 	char symbol, next_symbol, variable;
 	int j = 0, count_of_open_brackets = 1, count_of_close_brackets = 1;
-	bool flag = false, is_error = false, is_open_bracket = false;
-	Number_Of_Symbols* arr = new Number_Of_Symbols[size_input_string];//для подсчета баланса операндов и операторов
-	for (int i = 0; i < size_input_string; i++)			//нулевая ячейка для подсчета всех, другие - только для внутренних скобок 
+	bool flag, is_error = false, is_open_bracket = false;
+	Number_Of_Symbols* arr = new Number_Of_Symbols[size_input_string];//Г¤Г«Гї ГЇГ®Г¤Г±Г·ГҐГІГ  ГЎГ Г«Г Г­Г±Г  Г®ГЇГҐГ°Г Г­Г¤Г®Гў ГЁ Г®ГЇГҐГ°Г ГІГ®Г°Г®Гў
+	for (int i = 0; i < size_input_string; i++)			//Г­ГіГ«ГҐГўГ Гї ГїГ·ГҐГ©ГЄГ  Г¤Г«Гї ГЇГ®Г¤Г±Г·ГҐГІГ  ГўГ±ГҐГµ, Г¤Г°ГіГЈГЁГҐ - ГІГ®Г«ГјГЄГ® Г¤Г«Гї ГўГ­ГіГІГ°ГҐГ­Г­ГЁГµ Г±ГЄГ®ГЎГ®ГЄ 
 	{
 		arr[i].letters = 0;
 		arr[i].operators = 0;
@@ -128,8 +128,8 @@ bool rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& be
 			arr[0].letters += 1;
 			if (is_open_bracket)
 			{
-				for (int k = 1; k < count_of_open_brackets && k < size_input_string; k++)//нулевая ячейка используется 
-																			//для подсчета всех операторов и операндов
+				for (int k = 1; k < count_of_open_brackets && k < size_input_string; k++)//Г­ГіГ«ГҐГўГ Гї ГїГ·ГҐГ©ГЄГ  ГЁГ±ГЇГ®Г«ГјГ§ГіГҐГІГ±Гї 
+																			//Г¤Г«Гї ГЇГ®Г¤Г±Г·ГҐГІГ  ГўГ±ГҐГµ Г®ГЇГҐГ°Г ГІГ®Г°Г®Гў ГЁ Г®ГЇГҐГ°Г Г­Г¤Г®Гў
 				{
 					arr[k].letters += 1;
 				}
@@ -143,6 +143,7 @@ bool rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& be
 		}
 		else if (symbol == ')')
 		{
+			flag = false;
 			count_of_close_brackets++;
 			while (begin)
 			{
@@ -160,13 +161,13 @@ bool rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& be
 					arr[z].operators += 1;
 				}
 			}
-			if (!flag)//если не нашлась открывающая скобка
+			if (!flag)//ГҐГ±Г«ГЁ Г­ГҐ Г­Г ГёГ«Г Г±Гј Г®ГІГЄГ°Г»ГўГ ГѕГ№Г Гї Г±ГЄГ®ГЎГЄГ 
 			{
 				cout << "Bad brackets balance!" << endl;
 				is_error = true;
 			}
 			else if (checkLetterAndOperatorBalance(arr[count_of_open_brackets - 1].letters, arr[count_of_open_brackets - 1].operators))
-			{//если баланс внутри скобок нарушен
+			{//ГҐГ±Г«ГЁ ГЎГ Г«Г Г­Г± ГўГ­ГіГІГ°ГЁ Г±ГЄГ®ГЎГ®ГЄ Г­Г Г°ГіГёГҐГ­
 				cout << "Bad letter and operator balance in brackets!" << endl;
 				is_error = true;
 			}
@@ -220,7 +221,7 @@ bool rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& be
 		cout << "Bad brackets balance!" << endl;
 		is_error = true;
 	}
-	else if (checkLetterAndOperatorBalance(arr[0].letters, arr[0].operators))//если не равно общее число операндов и операторов
+	else if (checkLetterAndOperatorBalance(arr[0].letters, arr[0].operators))//ГҐГ±Г«ГЁ Г­ГҐ Г°Г ГўГ­Г® Г®ГЎГ№ГҐГҐ Г·ГЁГ±Г«Г® Г®ГЇГҐГ°Г Г­Г¤Г®Гў ГЁ Г®ГЇГҐГ°Г ГІГ®Г°Г®Гў
 	{
 		cout << "Bad letter and operator balance!" << endl;
 		is_error = true;
@@ -294,7 +295,7 @@ void calculateResult(char*& output_string, Output_Stack*& begin)
 					cout << "Error! 0^0 is uncertainty!" << endl;
 					is_error = true;
 				}
-				else if (var2 < 0. && (int)var1 != var1)//отрицательное число может быть возведено только в цклую степень
+				else if (var2 < 0. && (int)var1 != var1)//Г®ГІГ°ГЁГ¶Г ГІГҐГ«ГјГ­Г®ГҐ Г·ГЁГ±Г«Г® Г¬Г®Г¦ГҐГІ ГЎГ»ГІГј ГўГ®Г§ГўГҐГ¤ГҐГ­Г® ГІГ®Г«ГјГЄГ® Гў Г¶ГЄГ«ГіГѕ Г±ГІГҐГЇГҐГ­Гј
 				{
 					cout << "For negative number only integer power!" << endl;
 					is_error = true;
