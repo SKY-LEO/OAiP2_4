@@ -9,20 +9,20 @@ const int NUMBER_OF_VARIABLES_FOR_ARRAY = 26;
 struct Input_Stack
 {
 	char symbol;
-	Input_Stack* next;
+	Input_Stack* next = NULL;
 };
 
 struct Output_Stack
 {
 	double number;
-	Output_Stack* next;
+	Output_Stack* next = NULL;
 };
 
 struct Num_Of_Sym_Stack
 {
 	int letters = 0;
 	int operators = 0;
-	Num_Of_Sym_Stack* next;
+	Num_Of_Sym_Stack* next = NULL;
 };
 
 struct Value_Of_Symbols
@@ -43,13 +43,13 @@ void deleteStack(Num_Of_Sym_Stack*& begin);
 void popStack(Num_Of_Sym_Stack*& begin, int& letters, int& operators);
 void getMemoryForArray(char*& my_string, int& size);
 void checkInputString(char*& my_string, int& size);
-void calculateResult(char*& output_string, Output_Stack*& begin);
+void calculateResult(char* output_string, Output_Stack*& begin);
 int checkStringLength(char* my_string);
 int checkPriority(char symbol);
 int correctInputInt();
 double correctInputDouble();
 bool checkLetterAndOperatorBalance(int letters, int operators);
-bool rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& begin);
+bool rewriteToPolish(char* input_string, char* output_string, Input_Stack*& begin);
 
 int main()
 {
@@ -67,7 +67,8 @@ int main()
 		} while (code < 0 || code > 2);
 		switch (code)
 		{
-		case 1:cout << "Enter string:" << endl;
+		case 1:
+			cout << "Enter string:" << endl;
 			input_string = new char[size_of_string];
 			checkInputString(input_string, size_of_string);
 			length = checkStringLength(input_string);
@@ -101,15 +102,15 @@ int main()
 			cout << "Safe exit..." << endl;
 			if (input_begin) deleteStack(input_begin);
 			if (output_begin) deleteStack(output_begin);
-			if (!is_input_deleted)delete[]input_string;
-			if (!is_output_deleted)delete[]output_string;
+			if (!is_input_deleted) delete[]input_string;
+			if (!is_output_deleted) delete[]output_string;
 			system("pause");
 			return 0;
 		}
 	}
 }
 
-bool rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& begin)
+bool rewriteToPolish(char* input_string, char* output_string, Input_Stack*& begin)
 {
 	char symbol, next_symbol, variable;
 	int j = 0, letters, operators;
@@ -220,7 +221,7 @@ bool rewriteToPolish(char*& input_string, char*& output_string, Input_Stack*& be
 	return is_error;
 }
 
-void calculateResult(char*& output_string, Output_Stack*& begin)
+void calculateResult(char* output_string, Output_Stack*& begin)
 {
 	char symbol;
 	double var1, var2;
@@ -281,7 +282,7 @@ void calculateResult(char*& output_string, Output_Stack*& begin)
 					cout << "Error! 0^0 is uncertainty!" << endl;
 					is_error = true;
 				}
-				else if (var2 < 0. && (int)var1 != var1)//отрицательное число может быть возведено только в цклую степень
+				else if (var2 < 0. && (int)var1 != var1)//отрицательное число может быть возведено только в целую степень
 				{
 					cout << "For negative number only integer power!" << endl;
 					is_error = true;
@@ -407,11 +408,11 @@ Num_Of_Sym_Stack* refreshNumOfSymAndLet(Num_Of_Sym_Stack* begin, bool is_letters
 	{
 		if (is_letters)
 		{
-			begin->letters += 1;
+			begin->letters++;
 		}
 		else
 		{
-			begin->operators += 1;
+			begin->operators++;
 		}
 		begin = begin->next;
 		return refreshNumOfSymAndLet(begin, is_letters);

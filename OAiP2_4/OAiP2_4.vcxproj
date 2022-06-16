@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{4f74a91e-fc3a-46a2-b1b1-eff821fed277}</ProjectGuid>
+    <ProjectGuid>{A566C9FB-B530-48A1-93D8-D8E342F09417}</ProjectGuid>
     <RootNamespace>OAiP42</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <ProjectName>OAiP2_4</ProjectName>
